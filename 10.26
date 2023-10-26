@@ -1,0 +1,117 @@
+((define line
+    ((lambda (x)
+       (lambda (w b)
+         (let ((y (+ (* w x)b)))
+           y)))))
+
+ (display ((line 8) 4 6))
+
+ 
+(define line-xs
+   (tensor 2.0 1.0 4.0 3.0))
+
+(define line-ys
+  (tensor 1.8 1.2 4.2 3.3))
+
+ (define line
+   (lambda (x)
+     (lambda (O)
+             (+ (* (ref O 0) x) (ref O 1)))))
+
+ ((line 7.3)(list 1.0 0.0))
+
+ (define t
+  (tensor (tensor 3 2 8) (tensor 7 1 9)))
+
+ # the length of tensor
+ (tlen t )
+ #pick the 0th of tensro
+ (tref t 0)
+
+
+ (define rank
+   (lambda (t)
+     (cond ((scalar? t) 0)
+      (else  (add1(rank (tref t 0)))))))
+
+(define shape
+   (lambda (t)
+     (cond
+       ((scalar? t) (list))
+       (else (cons (tlen t) (shape (tref t 0)))))))
+
+#cons 是把数添加到数组里，cons a b ,把a加到b里
+#tref 把数组中的第一个元素取出来，再加入shape的循环中，同时取t的长度。
+
+ (define t
+   (tensor (tensor (tensor 5) (tensor 6) (tensor 8))
+   (tensor (tensor 7) (tensor 9) (tensor 5))))
+
+ (define rank
+   (lambda (t)
+     (ranked t 0)))
+ (define ranked
+   (lambda (t a)
+     (cond
+       ((scalar? t)a)
+       (else (ranked (tref t 0) (add1 a))))))
+
+ (tensor (tensor (tensor 8) (tensor 9))
+   (tensor (tensor 4) (tensor 7)))
+
+ (define sum^1
+   (lambda (t)
+     (summed t (sub1 (tlen t)) 0.0)))
+ (define summed
+   (lambda (t i a)
+            (cond
+              ((zero? i)(+ (tref t 0) a))
+              (else
+               (summed t (sub1 i) (+ (tref t i) a))))))
+
+
+ 为了拟合目标直线，通过定义Lossfunction 来衡量与目标函数的差距
+
+ (sum (sqr(- line-ys (((line line-xs)(list ref O 0 ref O 1))))))
+
+ (define l2-loss
+   (lambda (xs ys)
+     (lambda (O)
+       (let ((pre-ys((line xs) O)))
+         (sum
+          (sqr
+           (- ys pred-ys)))))))
+
+
+(define l2-loss
+  (lambda (line)
+    (lambda (xs ys)
+    (lambda (O)
+      (let ((pred-ys((line xs) O)))
+        (sum
+        (sqr
+          (- ys pred-ys))))))))
+ 
+ (define l2-loss
+   (lambda (target)
+     (lambda (xs ys)
+     (lambda (O)
+       (let ((pred-ys((target xs) O)))
+         (sum
+          (sqr
+           (- ys pred-ys))))))))
+
+ (define line-xs
+   (tensor 2.0 1.0 4.0 3.0))
+
+(define line-ys
+  (tensor 1.8 1.2 4.2 3.3))
+
+(((l2-loss line)line-xs line-ys)(list 0.0 0.0))
+
+ (define obj
+   (lambda (O)
+     (let ((pred-ys((line line-xs) O)))
+         (sum
+          (sqr
+           (- line-ys pred-ys))))))
