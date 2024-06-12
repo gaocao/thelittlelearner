@@ -1,0 +1,908 @@
+((define line
+    ((lambda (x)
+       (lambda (w b)
+         (let ((y (+ (* w x)b)))
+           y)))))
+
+ (display ((line 8) 4 6))
+
+ 
+(define line-xs
+   (tensor 2.0 1.0 4.0 3.0))
+
+(define line-ys
+  (tensor 1.8 1.2 4.2 3.3))
+
+ (define line
+   (lambda (x)
+     (lambda (O)
+             (+ (* (ref O 0) x) (ref O 1)))))
+
+ ((line 7.3)(list 1.0 0.0))
+
+ (define t
+  (tensor (tensor 3 2 8) (tensor 7 1 9)))
+
+ # the length of tensor
+ (tlen t )
+ #pick the 0th of tensro
+ (tref t 0)
+
+
+ (define rank
+   (lambda (t)
+     (cond ((scalar? t) 0)
+      (else  (add1(rank (tref t 0)))))))
+
+(define shape
+   (lambda (t)
+     (cond
+       ((scalar? t) (list))
+       (else (cons (tlen t) (shape (tref t 0)))))))
+
+#cons 是把数添加到数组里，cons a b ,把a加到b里
+#tref 把数组中的第一个元素取出来，再加入shape的循环中，同时取t的长度。
+#(tref (tensor 1.0 2.0 30.0 4.0) 0)例子
+ 
+
+ (define t
+   (tensor (tensor (tensor 5) (tensor 6) (tensor 8))
+   (tensor (tensor 7) (tensor 9) (tensor 5))))
+
+ (define rank
+   (lambda (t)
+     (ranked t 0)))
+ (define ranked
+   (lambda (t a)
+     (cond
+       ((scalar? t)a)
+       (else (ranked (tref t 0) (add1 a))))))
+
+ (tensor (tensor (tensor 8) (tensor 9))
+   (tensor (tensor 4) (tensor 7)))
+
+ (define sum-1
+   (lambda (t)
+     (summed t (sub1 (tlen t)) 0.0)))
+ (define summed
+   (lambda (t i a)
+            (cond
+              ((zero? i)(+ (tref t 0) a))
+              (else
+               (summed t (sub1 i) (+ (tref t i) a))))))
+
+(define line
+  (lambda (x)
+    (lambda (t)
+      (+ (* (ref t 0) x) (ref t 1)))))
+
+
+((line (tensor 2 7 5 11)) (list 4 6)) 
+
+ 
+
+ 为了拟合目标直线，通过定义Lossfunction 来衡量与目标函数的差距
+
+ (sum (sqr(- line-ys (((line line-xs)(list ref O 0 ref O 1))))))
+
+ (define l2-loss
+   (lambda (xs ys)
+     (lambda (O)
+       (let ((pre-ys((line xs) O)))
+         (sum
+          (sqr
+           (- ys pred-ys)))))))
+
+
+(define l2-loss
+  (lambda (line)
+    (lambda (xs ys)
+    (lambda (O)
+      (let ((pred-ys((line xs) O)))
+        (sum
+        (sqr
+          (- ys pred-ys))))))))
+ 
+ (define l2-loss
+   (lambda (target)
+     (lambda (xs ys)
+     (lambda (O)
+       (let ((pred-ys((target xs) O)))
+         (sum
+          (sqr
+           (- ys pred-ys))))))))
+
+ (define line-xs
+   (tensor 2.0 1.0 4.0 3.0))
+
+(define line-ys
+  (tensor 1.8 1.2 4.2 3.3))
+
+(((l2-loss line)line-xs line-ys)(list 0.0 0.0))
+
+ ((line line-xs) (list 0.0099 0.0))
+
+(gradient-of (lambda(θ)(sqr (ref θ 0))) (list 27.0))
+
+ #theta1 不能少了ref θ 0
+
+ (gradient-of  ((l2-loss line) line-xs line-ys)(list 0.0 0.0))
+
+
+
+
+ (define l2-loss
+   (lambda(xs ys)
+     (lamda(theta)
+           (let ((pred-ys((line xs)theta))))
+           (sum(sqr(- ys pred-ys))))))
+
+
+ (define revise
+   (lambda (f revs θ)
+     (cond
+       ((zero?revs)θ)
+       (else
+        (revise f (sub1 revs)(f θ))))))
+
+
+
+(let ((α 0.01)
+      (obj ((l2-loss line)line-xs line-ys)))
+  (let((f (lambda(θ)
+            (let ((gs (gradient-of obj θ)))
+              (list
+              (- (ref θ 0) (* α (ref gs 0)))
+              (-(ref θ 1) (* α (ref gs 1))))))))
+    (revise f 1000 (list 0.0 0.0))))
+
+(let ((α 0.01)
+      (obj ((l2-loss line)line-xs line-ys)))
+  (let((f (lambda(θ)
+            (let ((gs (gradient-of obj θ)))
+              (map(lamda(p g)
+                        (-p (* α g)))
+                  θ gs
+               )))))
+    (revise f 1000 (list 0.0 0.0))))
+
+    map 式子写完后直接接参数就可以了，参数无需括号
+
+
+
+(define revs 10000 )
+(define α 0.01)
+ 
+ (define gradient-descent
+   (lambda (obj θ)
+     (let ((f(lambda (big-theta)
+               (map(lambda(p g)
+                     (- p (* α g)))
+                   big-theta (gradient-of obj big-theta)))))
+     (revise f revs θ))))
+ 
+(gradient-descent ((l2-loss line)line-xs line-ys)
+                  (list 0.0 0.0))
+
+
+ (define gradient-descent
+   (lambda (obj θ)
+     (let ((f(lambda(big-theta)
+              (map(lambda(p g)
+                    (- p (* α g)))
+                    big-theta
+                    (gradient-of obj big-theta)))))
+       (revise f revs θ)
+       )))
+
+
+ (declare-hyper smaller)
+ (declare-hyper larger)
+
+ 超参数要提前声明，用with-hypers 赋值，并运算
+
+ (with-hypers
+  ((smaller 1)
+   (larger 2000))
+  (+ smaller larger))
+
+
+ 
+
+
+(define nonsense?
+  (lambda(x)
+    (= (sub1 x) smaller)))
+
+  (with-hypers
+  ((smaller 5))
+  (nonsense? 6))
+
+
+ (declare-hyper revs)
+ (declare-hyper α)
+
+(with-hypers
+ ((revs 1000)
+  (α 0.01))
+ (gradient-descent
+  ((l2-loss line)line-xs line-ys)
+  (list 0.0 0.0)))
+
+(define quad-xs
+  (tensor -1.0 0.0 1.0 2.0 3.0))
+
+(define quad-ys
+  (tensor 2.55 2.1 4.35 10.2 18.25)) 向量的正确表示方法
+
+(define quad
+  (lambda(t)
+    (lambda(θ)
+      (+ (* (ref θ 0) (sqr t))
+         (+ (* (ref θ 1) t) (ref θ 2))))))
+
+ ((quad 3.0)(list 4.5 2.1 7.8))
+
+ (gradient-descent ((l2-loss quad)quad-xs quad-ys)(list 0.0 0.0 0.0 ))
+
+ (with-hypers
+  ((revs 1000)
+   (α 0.001))
+  (gradient-descent((l2-loss quad)quad-xs quad-ys)(list 0.0 0.0 0.0)))
+
+
+ (define plane-xs
+   (tensor (tensor 1.0 2.05)
+           (tensor 1.0 3.0)
+           (tensor 2.0 2.0)
+           (tensor 2.0 3.91)
+           (tensor 3.0 6.13)
+           (tensor 4.0 8.09)))
+  (define plane-ys
+   (tensor (tensor 13.99)
+           (tensor 15.99)
+           (tensor 18.0)
+           (tensor 22.4)
+           (tensor 30.2)
+           (tensor 37.94)))
+
+ (define plane
+   (lambda(t)
+     (lambda(θ)
+       (+ (dot-product (ref θ 0) t) (ref θ 1)))))
+
+(define dot-product
+  (lambda(w t)
+    (sum-1
+     (* w t))))
+
+dot-product的定义有问题，但库里的没问题，蛋疼
+ 
+ (with-hypers
+  ((revs 1000)
+   (α 0.001))
+  (gradient-descent ((l2-loss plane)plane-xs plane-ys)
+                    (list (tensor 0.0 0.0)0.0)))
+
+
+((plane (tensor 2.0 3.91) 
+       (list (tensor 3.98 2.04) 5.78 )))
+
+((plane (tensor 2.0 3.91))
+ (list (tensor 3.98 2.04) 5.78 ))
+
+ 下面是对的，看清楚函数的层次，和括号。
+
+
+ (define samples
+   (lambda(n s)
+     (sampled n s (list))))
+
+ (define sampled
+   (lambda (n i a)
+     (cond
+       ((zero? i) a)
+       (else
+        (sampled n (sub1 i) (cons (random n) a))
+        ))))
+
+
+ (samples 20 3)
+
+
+
+ (let ((p(tensor 5.0 2.8 4.2 2.3 7.4 1.7 8.1)))
+    (trefs p (list 6 0 3 1)))
+
+  (let ((p(tensor 5.0 2.8 4.2 2.3 7.4 1.7 8.1)))
+    (trefs p (samples 6 4)))
+
+
+(define sampling-obj
+  (lambda(expectant xs ys)
+    (let((n tlen xs))
+      (lambda(theta)
+        (let ((b (samples n batch-size)))
+          ((expectant (trefs xs b) (trefs ys b))theta))))))
+
+ 接收目标函数，目标函数的数据集，返回目标函数及其目标函数的采样集+theta（为了接收参数）
+
+ (declare-hyper batch-size)
+
+(with-hypers
+    ((revs 1000)
+     (α 0.01)
+     (batch-size 4))
+  (gradient-descent
+   (sampling-obj
+    (l2-loss line) line-xs line-ys)
+   (list 0.0 0.0)))
+
+ (with-hypers
+  ((revs 15000)
+   (α 0.001)
+   (batch-size 4))
+  (gradient-descent
+   (sampling-obj (l2-loss plane)plane-xs plane-ys)
+   (list (tensor 0.0 0.0)0.0)))
+
+
+   (define lonely-i
+     (lambda(theta)
+       (map(lambda(p)
+             (list p))
+           theta)))
+
+ 
+   (define lonely-d
+     (lambda(big-theta)
+       (map(lambda(P)
+             (ref P 0))
+          big-theta)))
+
+(define lonely-u
+  (lambda(big-theta gs)
+    (map(lambda(P g)
+          (list(- (ref P 0)(* α g))))
+          big-theta gs)))
+
+
+ (define lonely-gradient-descent
+   (gradient-descent
+     lonely-i lonely-d lonely-u))
+
+(define gradient-descent
+  (lambda(inflate deflate update)
+    (lambda(obj theta)
+      (let ((f (lambda(big-theta)
+                 (update big-theta
+                         (gradient-of obj (deflate big-theta))))))
+        (deflate
+            (revise f revs
+                    (inflate theta)))))))
+
+ (define try-plane
+   (lambda(a-gradient-descent)
+     (with-hypers
+      ((revs 15000)
+       (α 0.001)
+       (batch-size 4))
+      (a-gradient-descent
+       (sampling-obj
+        (l2-loss plane)plane-xs plane-ys)
+       (list (tensor 0.0 0.0)0.0)))))
+
+ (try-plane lonely-gradient-descent)
+
+
+ (define naked-i
+   (lambda(theta)
+     (map(lambda(p)
+           (let ((P p))
+             P))
+         theta)))
+
+ (define naked-d
+   (lambda(big-theta)
+     (map(lambda(P)
+           (let((p P))
+             p))
+         big-theta)))
+
+ (define naked-u
+   (lambda(big-theta gs)
+     (map(lambda(P g)
+           (- P (* α g)))
+         big-theta gs)))
+ 
+ (define naked-gradient-descent
+   (gradient-descent
+    naked-i naked-d naked-u))
+
+ (try-plane naked-gradient-descent)
+
+
+
+
+ (define lonely-i
+   (lambda(p)
+     (list p)))
+
+ (define lonely-d
+   (lambda(P)
+     (ref P 0)))
+
+ (define lonely-u
+   (lambda(P g)
+   (list(- (ref P 0) (* α g)))))
+
+
+(define naked-i
+  (lambda(p)
+    (let ((P p))
+      p))
+
+  (define naked-d
+  (lambda(P)
+    (let ((p P))
+      p))
+ (define naked-u
+  (lambda(P g)
+    (let (- P (* α g))))
+
+(define gradient-descent
+  (lambda(inflate deflate update)
+    (lambda(obj theta)
+      (let ((f (lambda(big-theta)
+                 (map update big-theta
+                         (gradient-of obj (map deflate big-theta))))))
+        (map deflate
+            (revise f revs
+                    (map inflate theta)))))))
+
+   (declare-hyper miu)
+
+   (define velocity-i
+     (lambda(p)
+       (list p (zeroes p))))
+
+(define velocity-d
+  (lambda(P)
+     (ref P 0)))
+(define velocity-u
+  (lambda(P g)
+    (let ((v(- (* miu (ref P 1))(* α g))))
+          (list (+ (ref P 0) v)v))))
+
+(define velocity-gradient-descent
+   (gradient-descent
+    velocity-i velocity-d velocity-u))
+   
+ (define try-plane
+   (lambda(a-gradient-descent a-revs)
+     (with-hypers
+      ((revs a-revs)
+       (α 0.001)
+       (batch-size 4))
+      (a-gradient-descent
+       (sampling-obj
+        (l2-loss plane)plane-xs plane-ys)
+       (list (tensor 0.0 0.0)0.0)))))
+
+
+   (with-hypers
+    ((miu 0.9))
+    (try-plane velocity-gradient-descent 5000))
+
+
+    (define smooth
+    (lambda (decay-rate average g)
+      (+ (* decay-rate average) (* (- 1.0 decay-rate)g))))
+
+
+(smooth 0.9 (tensor 0.8 3.1 2.2) (tensor 1.0 1.1 3.0))
+
+(smooth 0.9 (tensor 0.82 2.9 2.28) (tensor 13.4 18.2 41.4))
+
+(smooth 0.9 (tensor 2.08 4.43 6.19) (tensor 1.1 0.3 67.3))
+
+
+
+   (declare-hypers beta)
+
+   (define epsilon 1e-08)
+
+   (define rms-u
+     (lamda (P g)
+            (let ((r(smooth beta (ref P 1) (sqr g))))
+              (let ((alpha-hat (/ alpha (+ (sqrt r) epsilon))))
+              (list (- (ref P 0) (* alpha-hat g))r)))))
+
+   (define rms-i
+     (lambda(p)
+       (list p (zeroes p))))
+
+   (define rms-d
+     (lambda(P)
+       (ref P 0)))
+
+
+   (define rms-gradient-descent
+     (gradient-descent rms-i rms-d rms-u))
+
+
+   (define try-plane
+     (lambda (a-gradient-descent a-revs an-alpha)
+       (with-hypers
+        ((revs a-revs)
+         (alpha an-alpha)
+         (batch-size 4))
+        (a-gradient-descent
+         (sampling-obj
+          (l2-loss plane)plane-xs plane-ys)
+         (list (tensor 0.0 0.0) 0.0)))))
+
+
+   (with-hypers
+    ((beta 0.9))
+    (try-plane
+     rms-gradient-descent 3000 0.01))
+
+   (define adam-u
+     (lambda (P g)
+       (let ((r (smooth beta (ref P 2) (sqr g))))
+         (let ((alpha-hat (/ alpha (+ (sqrt r) epsilon)))
+               (v (smooth miu (ref P 1) g)))
+               (list (- (ref P 0) (* alpha-hat v)) v r)))))
+
+   (define adam-i
+     (lambda (p)
+       (let ((v(zeroes
+                p)))
+         (let ((r v))
+           (list p v
+                 r)))))
+
+   (define adam-d
+     (lambda (P)
+       ref P 0))
+
+   (define adam-gradient-descent
+     (gradient-descent
+      adam-i adam-d
+      adam-u))
+
+   (with-hypers
+    ((mu 0.85)
+     (beta 0.9))
+    (try-plane adam-gradient-descent 1500 0.01))
+
+
+
+   (define sqrt
+     (lambda (t)
+       (cond
+         ((scalar? t) (sqrt-0 t))
+         (else (tmap sqrt t)))))
+
+
+   (define sqrt
+     (lambda (t)
+       (cond
+         ((of-rank? 0 t) (sqrt-0 t))
+         (else (tmap sqrt t)))))
+
+   (define of-rank?
+     (lambda (n t)
+       (= (rank t) n)))
+
+
+     (define of-rank?
+     (lambda (n t)
+       (cond
+         ((zero? n)(scalar? t))
+         ((scalar? t) #f)
+         (else (of-rank? (sub1 n) (tref t i))))))
+
+   (define ext1
+     (lambda (f)
+       (lambda (t)
+         (cond
+           ((of-rank? 0 t)(f t))
+           (else (tmap (ext1 f) t))))))
+   
+   (define sqrt
+     (ext1 sqrt-0))
+
+
+   (define zeroes
+     (ext1 (lambda (x) 0.0)))
+
+     (define ext1
+       (lambda (f n)
+         (lambda (t)
+         (cond
+           ((of-rank? n t) (f t))
+           (else (tmap (ext1 f n) t))))))
+
+   (define sqrt
+     (ext1 sqrt-0 0))
+
+
+   (define zeroes
+     (ext1 (lambda (x) 0.0) 0))
+
+
+   (define sum
+     (ext1 sum-1 1))
+
+   (define flatten
+     (ext1 flatten-2 2))
+
+   (define rank>
+     (lambda (t u)
+       (> (rank t) (rank u))))
+
+   (define rank>
+     (lambda (t u)
+       (cond
+         ((scalar? t) #f)
+         ((scalra? u) #t)
+         (else (rank> (tref t 0) (tref u 0))))))
+
+
+   (define of-ranks?
+     (lambda (n t m u)
+       (cond
+         ((of-rank? n t)(of-rank? m u))
+         (else #f))))
+
+   (define ext2
+     (lambda (f n m)
+       (lambda (t u)
+         (cond
+           ((of-ranks? n t m u)(f t u))
+           (else
+            (desc(ext2 f n m) n t m u ))))))
+
+
+   (define desc
+     (lambda (g n t m u)
+       (cond
+         ((of-rank? n t)(desc-u g t u))
+         ((of-rank? m u)(desc-u g t y))
+         ((= (tlen t) (tlen u) (tmap g t u)))
+         ((rank> t u) (desc-t g t u))
+         (else (desc-u g t u)))))
+   
+   (define desc-t
+     (lambda (g t u)
+       (tmap (lambda (et) (g et u)) t)))
+
+   (define desc-u
+     (lambda (g t u)
+       (tmap (lambda (eu) (g t eu))u)))
+
+
+   (define +
+     (ext2 +-0-0 0 0))
+
+      (define *
+     (ext2 *-0-0 0 0))
+
+   (define sqr
+     (lambda (t)
+       (* t t)))
+
+
+   (define dot-product
+     (ext2 dot-product-1-1 1 1))
+
+   (define *-2-1
+     (ext2 * 2 1))
+
+
+   (define rectify-0
+     (lambda (s)
+       (cond
+         ((< s 0.0)0.0)
+         (else s))))
+
+
+   (define rectify
+     (ex1 rectify-0 0))
+
+
+   (define linear-1-1
+     (lambda (t)
+       (lambda (theta)
+         (+ (dot-product (ref theta 0) t) (ref theta 1)))))
+
+   (define relu-1-1
+     (lambda (t)
+       (lambda (theta)
+         (rectify ((linear-1-1 t)theta)))))
+
+  ((relu-1-1 (tensor 2.0 1.0 3.0))(list (tensor 7.1 4.3 -6.4) 0.6))
+
+        (define of-rank?
+     (lambda (n t)
+       (cond
+         ((zero? n)(scalar? t))
+         ((scalar? t) #f)
+         (else (of-rank? (sub1 n) (tref t 0))))))
+
+
+
+     (define ext1
+       (lambda (f n)
+         (lambda (t)
+         (cond
+           ((of-rank? n t) (f t))
+           (else (tmap (ext1 f n) t))))))
+
+   (define sqrt
+     (ext1 sqrt-0 0))
+
+
+   (define zeroes
+     (ext1 (lambda (x) 0.0) 0))
+
+
+   (define sum
+     (ext1 sum-1 1))
+
+   (define flatten
+     (ext1 flatten-2 2))
+
+
+
+   (define rank>
+     (lambda (t u)
+       (cond
+         ((scalar? t) #f)
+         ((scalar? u) #t)
+         (else (rank> (tref t 0) (tref u 0))))))
+
+
+   (define of-ranks?
+     (lambda (n t m u)
+       (cond
+         ((of-rank? n t)(of-rank? m u))
+         (else #f))))
+
+   (define ext2
+     (lambda (f n m)
+       (lambda (t u)
+         (cond
+           ((of-ranks? n t m u)(f t u))
+           (else
+            (desc(ext2 f n m) n t m u ))))))
+
+
+   (define desc
+     (lambda (g n t m u)
+       (cond
+         ((of-rank? n t)(desc-u g t u))
+         ((of-rank? m u)(desc-u g t u))
+         ((= (tlen t) (tlen u) (tmap g t u)))
+         ((rank> t u) (desc-t g t u))
+         (else (desc-u g t u)))))
+   
+   (define desc-t
+     (lambda (g t u)
+       (tmap (lambda (et) (g et u)) t)))
+
+   (define desc-u
+     (lambda (g t u)
+       (tmap (lambda (eu) (g t eu))u)))
+
+
+   (define +
+     (ext2 +-0-0 0 0))
+
+      (define *
+     (ext2 *-0-0 0 0))
+
+   (define sqr
+     (lambda (t)
+       (* t t)))
+
+
+   (define dot-product
+     (ext2 dot-product-1-1 1 1))
+
+   (define *-2-1
+     (ext2 * 2 1))
+
+
+   (define rectify-0
+     (lambda (s)
+       (cond
+         ((< s 0.0)0.0)
+         (else s))))
+
+
+   (define rectify
+     (ext1 rectify-0 0))
+
+
+   (define linear-1-1
+     (lambda (t)
+       (lambda (theta)
+         (+ (dot-product (ref theta 0) t) (ref theta 1)))))
+
+   (define relu-1-1
+     (lambda (t)
+       (lambda (theta)
+         (rectify ((linear-1-1 t)theta)))))
+
+  ((relu-1-1 (tensor 0.5))(list (tensor 1.0) -1.0))
+
+
+   (define half-strip
+     (lambda (x theta)
+       (- ((relu-1-1 (tensor x))(list (ref theta 0) (ref theta 1))
+           ((relu-1-1 (tensor x))(list (ref theta 0) (ref theta 2)))))))
+
+  (define full-strip
+    (lambda (x theta)
+      (- (half-strip x (list (ref theta 0) (ref theta 1) (ref theta 2)))
+         (half-strip x (list (ref theta 3) (ref theta 4) (ref theta 5))))))
+
+
+   (+ (full-strip x
+        (list (tensor 1.0) -1.0 -1.5 (tensor 1.0) -3.0 -3.5))
+      (half-strip x
+        (list (tensor 1.0) -1.0 -1.5)))
+
+
+   (lambda (t)
+     (lambda (theta)
+       (let ((w (ref theta 0)) (b (ref theta 1)))
+             tensor(((relu-1-1 t)(list (tref w 0) (tref b 0)))
+                    ((relu-1-1 t)(list (tref w 1) (tref b 1)))
+                    ((relu-1-1 t)(list (tref w 2) (tref b 2)))
+                    ((relu-1-1 t)(list (tref w 3) (tref b 3)))))))
+
+   
+
+   (define dot-product-2-1
+     (lambda (w t)
+       (sum
+        (*-2-1 w t))))
+
+   (define linear
+     (lambda (t)
+       (lambda (theta)
+         (+ (dot-product-2-1 (ref theta 0) t) (ref theta 1)))))
+
+
+   (define ext2
+     (lambda (f n m)
+       (lambda (t u)
+         (cond
+           ((of-ranks n t m u)(f t u))
+           (else
+            (desc (ext2 f n m) n t m u ))))))
+
+
+
+
+   (define desc
+     (lambda (g n t m u)
+       (cond
+         ((of-rank? n t)(desc-u g t u))
+        ((of-rank? m u)(desc-t g t u))
+         ((= (tref t) (tref u) (tmap g t u)))
+         ((rank>t u)(desc-t g t u))
+         (else (desc-u g t u))))))
+   
+   
+   (define desc-t
+     (lambda (g t u)
+       (tmap (lambda (et) (g et u) t))))
+
+      (define desc-u
+     (lambda (g t u)
+       (tmap (lambda (eu) (g t eu) u))))
